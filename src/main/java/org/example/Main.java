@@ -2,17 +2,8 @@
 
 package org.example;
 
-import java.io.IOException;
-import java.io.StringReader;
-import java.text.Normalizer;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
+import java.io.*;
+import java.util.*;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.StringField;
@@ -21,7 +12,6 @@ import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
-import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
@@ -29,10 +19,13 @@ import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.ByteBuffersDirectory;
+import org.apache.tika.metadata.Metadata;
+import org.apache.tika.parser.AutoDetectParser;
+import org.apache.tika.sax.BodyContentHandler;
 
 
 public class Main {
-    public static void main(String[] args) throws IOException, ParseException {
+    public static void main(String[] args) throws Exception {
         CustomRomanianAnalyzer analyzer = new CustomRomanianAnalyzer();
 
         // 1. create the index
@@ -40,21 +33,28 @@ public class Main {
         IndexWriterConfig config = new IndexWriterConfig(analyzer);
         IndexWriter w = new IndexWriter(index, config);
 
-        Map<String, String> dictionary = new HashMap<>();
-        // Adding key-value pairs to the dictionary
-        dictionary.put("Primul text", "Acesta este un exemplu de test in română");
-        dictionary.put("Al doilea text", "Vorbim despre al doilea text și diacritice.");
-        dictionary.put("Al treilea text", "Ceva simplu în al 3-lea text cu diacriticele și cratimă românesc.");
+        // Replace the dictionary with text extracted from files
+        String folderPath = "data/"; // Specify your folder path here
+        File folder = new File(folderPath);
 
-        for (Map.Entry<String, String> entry : dictionary.entrySet()) {
-            String key = entry.getKey();
-            String value = entry.getValue();
-            addDoc(w, key, value);
+        // Extract text from the folder
+        List<String> extractedTexts = extractTextFromFolder(folder);
+
+        // Use the file names as keys and the extracted text as values
+        for (File file : folder.listFiles()) {
+            if (file.isFile()) {
+                String key = file.getName(); // File name as the key
+                String value = extractTextFromFile(file); // Extracted text from the file
+
+                // Add the document to the index
+                addDoc(w, key, value);
+            }
         }
 
         w.close();
+
         // 2. query
-        String querystr = args.length > 0 ? args[0] : "român";
+        String querystr = args.length > 0 ? args[0] : "metodă";
 
         // the "title" arg specifies the default field to use
         // when no field is explicitly specified in the query.
@@ -69,6 +69,7 @@ public class Main {
 
         // 4. display results
         System.out.println("Found " + hits.length + " hits.");
+
         for(int i=0; i<hits.length; i++) {
             int docId = hits[i].doc;
             Document d = searcher.doc(docId);
@@ -88,5 +89,45 @@ public class Main {
         // Add doc body (we want it tokenized, but no need to store its value)
         doc.add(new TextField("body", body, Field.Store.NO));
         w.addDocument(doc);
+    }
+
+    // Method to extract text from all documents inside a folder
+    private static List<String> extractTextFromFolder(File folder) throws Exception {
+        List<String> extractedTexts = new ArrayList<>();
+
+        if (folder.exists() && folder.isDirectory()) {
+            File[] files = folder.listFiles();
+
+            if (files != null) {
+                // Sort files alphabetically by name to maintain the order
+                Arrays.sort(files);
+
+                for (File file : files) {
+                    // Only process files (skip subdirectories)
+                    if (file.isFile()) {
+                        String extractedText = extractTextFromFile(file);
+                        extractedTexts.add(extractedText);
+                    }
+                }
+            }
+        } else {
+            throw new IllegalArgumentException("Provided path is not a valid directory.");
+        }
+
+        return extractedTexts;
+    }
+
+    // Method to extract text from a single file
+    private static String extractTextFromFile(File file) throws Exception {
+        // Use Tika's AutoDetectParser for automatic format detection
+        AutoDetectParser parser = new AutoDetectParser();
+        Metadata metadata = new Metadata();
+        BodyContentHandler handler = new BodyContentHandler(-1); // Use -1 for unlimited text size
+
+        try (InputStream input = new FileInputStream(file)) {
+            parser.parse(input, handler, metadata);
+        }
+
+        return handler.toString();
     }
 }

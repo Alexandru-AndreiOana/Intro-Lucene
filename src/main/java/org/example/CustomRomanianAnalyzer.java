@@ -12,7 +12,6 @@ import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
 
-
 public class CustomRomanianAnalyzer extends Analyzer {
 
     // Combine the default Romanian stopwords with custom stopwords
@@ -32,6 +31,7 @@ public class CustomRomanianAnalyzer extends Analyzer {
 
         // Create a new CharArraySet for STOP_WORDS with diacritics removed
         STOP_WORDS = new CharArraySet(stopwords.size(), true);
+
         for (Object obj : stopwords) {
             char[] charArray = (char[]) obj;  // Cast each element to char[]
             String word = new String(charArray);  // Convert char[] to String
@@ -39,8 +39,6 @@ public class CustomRomanianAnalyzer extends Analyzer {
             String wordWithoutDiacritics = removeDiacritics(word);
             STOP_WORDS.add(wordWithoutDiacritics);
         }
-
-        System.out.println("After removing diacritics: " + STOP_WORDS);
     }
 
     @Override
