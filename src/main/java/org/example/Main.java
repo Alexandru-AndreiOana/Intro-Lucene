@@ -44,17 +44,7 @@ public class Main {
         // Adding key-value pairs to the dictionary
         dictionary.put("Primul text", "Acesta este un exemplu de test in română");
         dictionary.put("Al doilea text", "Vorbim despre al doilea text și diacritice.");
-        dictionary.put("Al treilea text", "Ceva simplu în al 3-lea text cu diacritice și cratimă.");
-
-        // [DEBUG] For testing the analyzer
-        for (Map.Entry<String, String> entry : dictionary.entrySet()) {
-            String key = entry.getKey();
-            String value = entry.getValue();
-            addDoc(w, key, value);
-
-            List<String> tokens = getTokenizedSentences(analyzer, value);
-            System.out.println("Tokens for \"" + key + "\": " + tokens);
-        }
+        dictionary.put("Al treilea text", "Ceva simplu în al 3-lea text cu diacriticele și cratimă românesc.");
 
         for (Map.Entry<String, String> entry : dictionary.entrySet()) {
             String key = entry.getKey();
@@ -64,7 +54,7 @@ public class Main {
 
         w.close();
         // 2. query
-        String querystr = args.length > 0 ? args[0] : "diacritică";
+        String querystr = args.length > 0 ? args[0] : "român";
 
         // the "title" arg specifies the default field to use
         // when no field is explicitly specified in the query.
@@ -98,27 +88,5 @@ public class Main {
         // Add doc body (we want it tokenized, but no need to store its value)
         doc.add(new TextField("body", body, Field.Store.NO));
         w.addDocument(doc);
-    }
-
-    public static String removeDiacritics(String text) {
-        // Normalize text to decompose diacritics
-        String normalized = Normalizer.normalize(text, Normalizer.Form.NFD);
-        // Remove diacritics using a regex pattern
-        return normalized.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
-    }
-
-    public static List<String> getTokenizedSentences(Analyzer analyzer, String sentence) throws IOException {
-        List<String> tokens = new ArrayList<>();
-        TokenStream stream = analyzer.tokenStream(null, new StringReader(sentence));
-        CharTermAttribute charTermAttribute = stream.addAttribute(CharTermAttribute.class);
-
-        stream.reset();
-        while (stream.incrementToken()) {
-            tokens.add(charTermAttribute.toString());
-        }
-        stream.end();
-        stream.close();
-
-        return tokens;
     }
 }
