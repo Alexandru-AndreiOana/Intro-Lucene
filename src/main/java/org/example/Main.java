@@ -37,18 +37,27 @@ public class Main {
         String folderPath = "data/"; // Specify your folder path here
         File folder = new File(folderPath);
 
-        // Extract text from the folder
-        List<String> extractedTexts = extractTextFromFolder(folder);
+        // Extract the text from the files and add to index
+        if (folder.exists() && folder.isDirectory()) {
+            File[] files = folder.listFiles();
 
-        // Use the file names as keys and the extracted text as values
-        for (File file : folder.listFiles()) {
-            if (file.isFile()) {
-                String key = file.getName(); // File name as the key
-                String value = extractTextFromFile(file); // Extracted text from the file
+            if (files != null) {
+                Arrays.sort(files);
 
-                // Add the document to the index
-                addDoc(w, key, value);
+                for (File file : files) {
+                    if (file.isFile()) {
+                        String key = file.getName(); // File name as the key
+                        String value = extractTextFromFile(file); // Extracted text from the file
+
+                        // Add the document to the index
+                        addDoc(w, key, value);
+                    }
+                }
+            } else {
+                throw new IllegalArgumentException("No files found in " + folderPath);
             }
+        } else {
+            throw new IllegalArgumentException("Provided path is not a valid directory" + folderPath);
         }
 
         w.close();
